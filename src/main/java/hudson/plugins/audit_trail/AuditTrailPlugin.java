@@ -29,17 +29,17 @@ import hudson.model.*;
 import hudson.model.Descriptor.FormException;
 import hudson.util.FormValidation;
 import hudson.util.PluginServletFilter;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
+import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import javax.servlet.ServletException;
-
-import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Keep audit trail of particular Jenkins operations, such as configuring jobs.
@@ -122,6 +122,7 @@ public class AuditTrailPlugin extends Plugin {
         }
 
     }
+
     public void onFinalized(AbstractBuild build) {
         if (this.started) {
             StringBuilder causeBuilder = new StringBuilder(100);
@@ -136,7 +137,7 @@ public class AuditTrailPlugin extends Plugin {
             for (AuditLogger logger : loggers) {
                 String message = build.getFullDisplayName() +
                         " " + causeBuilder.toString() +
-                        " on node " + (build.getBuiltOn() == null ? "#unknown#" : build.getBuiltOn().getDisplayName()) +
+                        " on node " + buildNodeName(build) +
                         " started at " + build.getTimestampString2() +
                         " completed in " + build.getDuration() + "ms" +
                         " completed: " + build.getResult();
@@ -144,6 +145,15 @@ public class AuditTrailPlugin extends Plugin {
             }
 
         }
+    }
+
+    private String buildNodeName(AbstractBuild build) {
+        Node node = build.getBuiltOn();
+        if (node != null) {
+            return node.getDisplayName();
+        }
+
+        return "#unknown#";
     }
 
     /* package */ void onRequest(String uri, String extra, String username) {

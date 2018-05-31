@@ -16,43 +16,54 @@ public class ConsoleAuditLogger extends AuditLogger {
     public enum Output {STD_OUT, STD_ERR}
 
     private final Output output;
-    private final PrintStream out;
     private final String dateFormat;
-    private final SimpleDateFormat sdf;
-
+    private final String logPrefix;
+    private transient PrintStream out;
+    private transient SimpleDateFormat sdf;
+    private transient String logPrefixPadded;
 
     @DataBoundConstructor
-    public ConsoleAuditLogger(Output output, String dateFormat) {
-        if (output == null)
+    public ConsoleAuditLogger(Output output, String dateFormat, String logPrefix) {
+        if (output == null) {
             throw new NullPointerException("output can not be null");
-        if(dateFormat == null)
+        }
+        if (dateFormat == null) {
             throw new NullPointerException("dateFormat can not be null");
+        }
 
+        this.logPrefix = logPrefix;
         this.output = output;
-        switch (output) {
-            case STD_ERR:
-                out = System.err;
-                break;
-            case STD_OUT:
-                out = System.out;
-                break;
-            default:
+        if (output != Output.STD_ERR && output != Output.STD_OUT) {
                 throw new IllegalArgumentException("Unsupported output " + output);
         }
+
         this.dateFormat = dateFormat;
-        sdf = new SimpleDateFormat(dateFormat);
+
+        // validate the dataFormat
+        new SimpleDateFormat(dateFormat);
     }
 
     @Override
     public void log(String event) {
-        synchronized (sdf) {
-            this.out.println(sdf.format(new Date()) + " - " + event);
+        synchronized (output) {
+            this.out.println(sdf.format(new Date()) + this.logPrefixPadded + event);
         }
     }
 
     @Override
     public void configure() {
-
+        synchronized (output) {
+            switch (output) {
+                case STD_ERR:
+                    out = System.err;
+                    break;
+                case STD_OUT:
+                    out = System.out;
+                    break;
+            }
+            sdf = new SimpleDateFormat(dateFormat);
+            this.logPrefixPadded = getLogPrefixPadded();
+        }
     }
 
     public Output getOutput() {
@@ -61,6 +72,25 @@ public class ConsoleAuditLogger extends AuditLogger {
 
     public String getDateFormat() {
         return this.dateFormat;
+    }
+
+    public String getLogPrefix() {
+        return this.logPrefix;
+    }
+
+    private Boolean hasLogPrefix() {
+        return this.logPrefix != null && !this.logPrefix.equals("");
+    }
+
+    private String getLogPrefixPadded() {
+        if (hasLogPrefix()) {
+            if (logPrefixPadded == null) {
+                logPrefixPadded = String.format(" - %s - ", getLogPrefix());
+            }
+            return logPrefixPadded;
+        }
+
+        return " - ";
     }
 
     @Extension
@@ -90,6 +120,7 @@ public class ConsoleAuditLogger extends AuditLogger {
 
         if (!dateFormat.equals(that.dateFormat)) return false;
         if (output != that.output) return false;
+        if (!logPrefix.equals(that.logPrefix)) return false;
 
         return true;
     }
@@ -98,6 +129,7 @@ public class ConsoleAuditLogger extends AuditLogger {
     public int hashCode() {
         int result = output.hashCode();
         result = 31 * result + dateFormat.hashCode();
+        result = 31 * result + logPrefix.hashCode();
         return result;
     }
 }

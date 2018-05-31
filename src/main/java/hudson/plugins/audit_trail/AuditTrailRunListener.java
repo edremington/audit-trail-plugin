@@ -7,8 +7,8 @@ import hudson.model.listeners.RunListener;
 import jenkins.model.Jenkins;
 
 /**
-* @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
-*/
+ * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
+ */
 @Extension
 public class AuditTrailRunListener extends RunListener<Run> {
 
@@ -19,12 +19,16 @@ public class AuditTrailRunListener extends RunListener<Run> {
     @Override
     public void onStarted(Run run, TaskListener listener) {
         AuditTrailPlugin plugin = (AuditTrailPlugin) Jenkins.getInstance().getPlugin("audit-trail");
-        plugin.onStarted(run);
+        if (plugin != null) {
+            plugin.onStarted(run);
+        }
     }
 
     @Override
     public void onFinalized(Run run) {
         AuditTrailPlugin plugin = (AuditTrailPlugin) Jenkins.getInstance().getPlugin("audit-trail");
-        plugin.onFinalized(run);
+        if (plugin != null) {
+            plugin.onFinalized(run);
+        }
     }
 }
